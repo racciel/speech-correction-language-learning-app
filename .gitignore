@@ -2,3 +2,5 @@ speechcorrvenv
 recording
 main.py
 requirements.txt
+backend/backendvenv
+frontend/frontendvenv
