@@ -1,0 +1,8 @@
+flask
+whisper
+scipy
+numpy
+openai-whisper
+flask-cors
+transformers
+torch

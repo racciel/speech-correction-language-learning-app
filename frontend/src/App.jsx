@@ -1,35 +1,64 @@
-import { useState } from 'react'
-import axios from 'axios'
+import React, { useRef, useState } from "react";
+import axios from "axios";
 
 function App() {
-  const [inputText, setInputText] = useState('')
-  const [correctedText, setCorrectedText] = useState('')
+    const [transcription, setTranscription] = useState("");
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
 
-  const handleCorrect = async () => {
-    try {
-      const response = await axios.post('http://127.0.0.1:5000/api/correct', { text: inputText })
-      setCorrectedText(response.data.corrected_text)
-    } catch (error) {
-      console.error('Error correcting speech:', error)
-    }
-  }
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
 
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Speech Correction App</h1>
-      <textarea
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        placeholder="Type your speech here..."
-        rows={5}
-        cols={50}
-      />
-      <br />
-      <button onClick={handleCorrect} style={{ marginTop: '1rem' }}>Correct Speech</button>
-      <h2>Corrected Text:</h2>
-      <p>{correctedText}</p>
-    </div>
-  )
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+                const formData = new FormData();
+                formData.append("file", audioBlob, "temp.webm");
+
+                try {
+                    const response = await axios.post("http://localhost:5000/transcribe", formData, {
+                        headers: { "Content-Type": "multipart/form-data" },
+                    });
+                    setTranscription(response.data.transcription);
+                } catch (error) {
+                    console.error("Error transcribing audio:", error);
+                }
+
+                audioChunksRef.current = [];
+            };
+
+            mediaRecorderRef.current.start();
+            console.log("Recording started...");
+
+            // Stop recording automatically after 3 seconds
+            setTimeout(() => {
+                stopRecording();
+            }, 3000);
+
+        } catch (error) {
+            console.error("Error accessing microphone:", error);
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.stop();
+            console.log("Recording stopped.");
+        }
+    };
+
+    return (
+        <div>
+            <h1>Audio Transcription App</h1>
+            <button onClick={startRecording}>Start Recording</button>
+            <p>Transcription: {transcription}</p>
+        </div>
+    );
 }
 
-export default App
+export default App;

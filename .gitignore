@@ -1,5 +1,2 @@
-speechcorrvenv
-recording
-main.py
-requirements.txt
 backend/backendvenv
+backend/recordings
